@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:cloudhub="http://www.mulesoft.org/schema/mule/cloudhub" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/cloudhub http://www.mulesoft.org/schema/mule/cloudhub/current/mule-cloudhub.xsd">
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="a40341d6-8ea2-4d4b-beb7-6ffebf4a7409" maxEntries="100" entryTtl="15" entryTtlUnit="DAYS" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="f04cb81b-c5eb-4bf7-94f8-100939d361e2" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<cloudhub:config name="CloudHub_Config" doc:name="CloudHub Config" doc:id="0333cd43-1ba8-4b80-80aa-89dd20e3a21e" >
+		<cloudhub:connection username="12345gopi" password="12345Gopi" environment="6becbb1d-ea85-4be2-9ff0-0433dd4b4875"/>
+	</cloudhub:config>
+	<flow name="osFlow" doc:id="681dcc1b-ee76-4027-9f41-e7f08c98b41a" >
+		<http:listener doc:name="Listener" doc:id="75349857-a610-4e1f-92ae-bd5d7e24fe06" config-ref="HTTP_Listener_config" path="/store"/>
+		<os:store doc:name="Store" doc:id="bc97563b-582d-487d-a785-7d3ffb810a13" key='#[now() as String {format: "YYYYMMDDHHMMSS"}]' objectStore="Object_store"/>
+	</flow>
+	<flow name="osFlow1" doc:id="8e9425de-5400-4984-9da6-03741e6a394a" >
+		<http:listener doc:name="Listener" doc:id="4a08704e-0195-4405-b6b1-aeb53ee59ba8" config-ref="HTTP_Listener_config" path="/ret"/>
+		<os:retrieve-all-keys doc:name="Retrieve all keys" doc:id="52449d4e-4976-4868-b80f-94ee8c1d7c9c" objectStore="Object_store"/>
+		<foreach doc:name="For Each" doc:id="03b054cd-ae5c-4b17-8a3e-4479fe61ea68" >
+			<os:retrieve doc:name="Retrieve" doc:id="c396197b-138d-4ff5-bdc4-934a1a0df6d9" key="#[payload]" objectStore="Object_store"/>
+			<logger level="INFO" doc:name="Logger" doc:id="80744e82-963b-4bb9-8e32-2285a79ea384" message="#[payload]"/>
+		</foreach>
+	</flow>
+	<flow name="osFlow2" doc:id="25b82baf-7a47-4dd9-9df4-f99fa843e938" >
+		<http:listener doc:name="Listener" doc:id="11b71c28-1c49-45c5-91d0-99f3e7e91dbf" config-ref="HTTP_Listener_config" path="/con"/>
+		<os:contains doc:name="Contains" doc:id="e21b3afe-3be6-4d81-aa2b-d8c5ba40cc28" key="#[67777777]" objectStore="Object_store"/>
+		<ee:transform doc:name="Transform Message" doc:id="089f0fe9-e964-4a65-bbaa-859d54300057" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="5df3a90a-eb6f-40dd-959b-e6faed0dc53b" message="#[payload]"/>
+	</flow>
+	<flow name="osFlow3" doc:id="e45060f6-8015-46c4-9f14-2ee13155272e" >
+		<http:listener doc:name="Listener" doc:id="328b2b0d-d9f3-43ba-b0e7-96ac4c332b23" config-ref="HTTP_Listener_config" path="/notification"/>
+		<set-payload value='#["please drink water"]' doc:name="Set Payload" doc:id="b78d8a65-094f-480c-b3e6-d499bcf88a8b" />
+		<cloudhub:create-notification domain="drink-water-app" doc:name="Create Notification" doc:id="cfc9eda9-dae8-45d1-880a-9d0a75f96073" config-ref="CloudHub_Config" priority="INFO">
+			<cloudhub:message ><![CDATA[#["there are errors but dont forget to drink water"]]]></cloudhub:message>
+		</cloudhub:create-notification>
+		<logger level="INFO" doc:name="Logger" doc:id="8138dc8a-bfc1-4c2a-bc76-2863f07d1987" message='#["what happened?"]'/>
+	</flow>
+</mule>
